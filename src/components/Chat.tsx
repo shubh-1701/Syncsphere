@@ -28,13 +28,19 @@ export default function Chat({ onBack }: Props) {
     if (p) {
       const parsed = JSON.parse(p);
       setProfile(parsed);
-      const greetingLang = parsed.language === "Spanish" ? "Hola" : parsed.language === "French" ? "Bonjour" : parsed.language === "Hindi" ? "नमस्ते" : "Hi";
-      setMessages([
-        {
-          role: "assistant",
-          content: `${greetingLang} ${parsed.name}! I'm excited to help you learn **${parsed.subject}** at a **${parsed.level}** level. \n\nWhat specific topic would you like to start with?`
-        }
-      ]);
+      
+      const savedChats = localStorage.getItem("edu_chats");
+      if (savedChats) {
+        setMessages(JSON.parse(savedChats));
+      } else {
+        const greetingLang = parsed.language === "Spanish" ? "Hola" : parsed.language === "French" ? "Bonjour" : parsed.language === "Hindi" ? "नमस्ते" : "Hi";
+        setMessages([
+          {
+            role: "assistant",
+            content: `${greetingLang} ${parsed.name}! I'm excited to help you learn **${parsed.subject}** at a **${parsed.level}** level. \n\nWhat specific topic would you like to start with?`
+          }
+        ]);
+      }
     }
 
     // Initialize Speech Recognition if available
@@ -62,6 +68,9 @@ export default function Chat({ onBack }: Props) {
   }, []);
 
   useEffect(() => {
+    if (messages.length > 0) {
+      localStorage.setItem("edu_chats", JSON.stringify(messages));
+    }
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
@@ -71,7 +80,6 @@ export default function Chat({ onBack }: Props) {
       setIsListening(false);
     } else {
       if (profile?.language) {
-        // Simple mapping to basic lang codes
         const langMap: any = { "Spanish": "es-ES", "French": "fr-FR", "Hindi": "hi-IN", "English": "en-US" };
         recognitionRef.current.lang = langMap[profile.language] || "en-US";
       }
@@ -86,7 +94,6 @@ export default function Chat({ onBack }: Props) {
 
   const speakText = (text: string) => {
     if ('speechSynthesis' in window) {
-      // Remove markdown characters for cleaner speech
       const cleanText = text.replace(/[*_#`]/g, '');
       const utterance = new SpeechSynthesisUtterance(cleanText);
       if (profile?.language) {
@@ -130,7 +137,6 @@ export default function Chat({ onBack }: Props) {
       const data = await res.json();
       setMessages(prev => [...prev, { role: "assistant", content: data.reply }]);
       
-      // Add XP
       if (!customAction) {
         const currentXP = parseInt(localStorage.getItem("edu_xp") || "0");
         localStorage.setItem("edu_xp", (currentXP + 10).toString());
@@ -142,6 +148,13 @@ export default function Chat({ onBack }: Props) {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("edu_profile");
+    localStorage.removeItem("edu_auth_token");
+    localStorage.removeItem("edu_chats");
+    window.location.reload();
   };
 
   const downloadPDF = async () => {

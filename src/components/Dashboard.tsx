@@ -45,6 +45,7 @@ export default function Dashboard({ onStartChat }: Props) {
         <button onClick={() => {
           localStorage.removeItem("edu_profile");
           localStorage.removeItem("edu_xp");
+          localStorage.removeItem("edu_chats");
           window.location.reload();
         }} className="p-2 bg-slate-800 hover:bg-slate-700 rounded-xl transition-colors text-slate-400 hover:text-white" title="Reset Profile">
           <Settings className="w-5 h-5" />
