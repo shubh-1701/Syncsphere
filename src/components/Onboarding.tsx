@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { GraduationCap, ArrowRight, BookOpen, Sparkles } from "lucide-react";
+import { GraduationCap, ArrowRight, BookOpen, Sparkles, Globe } from "lucide-react";
 
 interface Props {
   onComplete: () => void;
@@ -13,9 +13,10 @@ export default function Onboarding({ onComplete }: Props) {
   const [name, setName] = useState("");
   const [subject, setSubject] = useState("");
   const [level, setLevel] = useState("");
+  const [language, setLanguage] = useState("");
 
   const handleComplete = () => {
-    localStorage.setItem("edu_profile", JSON.stringify({ name, subject, level }));
+    localStorage.setItem("edu_profile", JSON.stringify({ name, subject, level, language }));
     onComplete();
   };
 
@@ -95,7 +96,7 @@ export default function Onboarding({ onComplete }: Props) {
               ].map(lvl => (
                 <button 
                   key={lvl.id} 
-                  onClick={() => { setLevel(lvl.id); }} 
+                  onClick={() => { setLevel(lvl.id); setStep(4); }} 
                   className={`w-full text-left p-4 rounded-xl border transition-all ${level === lvl.id ? 'bg-blue-600/20 border-blue-500' : 'bg-slate-800 border-slate-700 hover:border-slate-500'}`}
                 >
                   <div className="font-bold text-lg mb-1 flex items-center justify-between">
@@ -105,7 +106,25 @@ export default function Onboarding({ onComplete }: Props) {
                 </button>
               ))}
             </div>
-            <button onClick={handleComplete} disabled={!level} className="w-full bg-blue-600 disabled:bg-slate-700 disabled:text-slate-400 text-white px-6 py-4 rounded-xl font-medium transition-all shadow-[0_0_15px_rgba(59,130,246,0.3)] hover:shadow-[0_0_25px_rgba(59,130,246,0.5)]">
+          </motion.div>
+        )}
+
+        {step === 4 && (
+          <motion.div key="step4" initial={{opacity: 0, y: 20}} animate={{opacity: 1, y: 0}} exit={{opacity: 0, y: -20}} className="w-full max-w-md mx-auto">
+            <h2 className="text-2xl font-bold mb-6 font-heading">Preferred Language?</h2>
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              {["English", "Spanish", "Hindi", "French"].map(lang => (
+                <button 
+                  key={lang} 
+                  onClick={() => { setLanguage(lang); }} 
+                  className={`p-4 rounded-xl border transition-all flex flex-col items-center group ${language === lang ? 'bg-blue-600/20 border-blue-500' : 'bg-slate-800 border-slate-700 hover:border-blue-500'}`}
+                >
+                  <Globe className={`w-6 h-6 mb-2 ${language === lang ? 'text-blue-400' : 'text-slate-400 group-hover:text-blue-400'}`} />
+                  <span className="font-medium">{lang}</span>
+                </button>
+              ))}
+            </div>
+            <button onClick={handleComplete} disabled={!language} className="w-full bg-blue-600 disabled:bg-slate-700 disabled:text-slate-400 text-white px-6 py-4 rounded-xl font-medium transition-all shadow-[0_0_15px_rgba(59,130,246,0.3)] hover:shadow-[0_0_25px_rgba(59,130,246,0.5)]">
               Start Learning
             </button>
           </motion.div>

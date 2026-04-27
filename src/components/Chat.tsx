@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Send, Bot, User, Sparkles, Loader2, LogOut } from "lucide-react";
+import { Send, Bot, User, Sparkles, Loader2, LogOut, Download, Briefcase } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 
 interface Message {
@@ -13,19 +13,21 @@ export default function Chat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [profile, setProfile] = useState<{name: string, subject: string, level: string} | null>(null);
+  const [profile, setProfile] = useState<{name: string, subject: string, level: string, language?: string} | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const p = localStorage.getItem("edu_profile");
     if (p) {
       const parsed = JSON.parse(p);
       setProfile(parsed);
+      const greetingLang = parsed.language === "Spanish" ? "Hola" : parsed.language === "French" ? "Bonjour" : parsed.language === "Hindi" ? "नमस्ते" : "Hi";
       // Initial greeting
       setMessages([
         {
           role: "assistant",
-          content: `Hi ${parsed.name}! I'm excited to help you learn **${parsed.subject}** at a **${parsed.level}** level. \n\nWhat specific topic would you like to start with?`
+          content: `${greetingLang} ${parsed.name}! I'm excited to help you learn **${parsed.subject}** at a **${parsed.level}** level. \n\nWhat specific topic would you like to start with?`
         }
       ]);
     }
@@ -35,13 +37,18 @@ export default function Chat() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || isLoading) return;
+  const handleSubmit = async (e?: React.FormEvent, customAction?: "career") => {
+    if (e) e.preventDefault();
+    if ((!input.trim() && !customAction) || isLoading) return;
 
-    const userMessage = { role: "user" as const, content: input };
+    let userMessageContent = input;
+    if (customAction === "career") {
+      userMessageContent = "How can I use this in my future career?";
+    }
+
+    const userMessage = { role: "user" as const, content: userMessageContent };
     setMessages(prev => [...prev, userMessage]);
-    setInput("");
+    if (!customAction) setInput("");
     setIsLoading(true);
 
     try {
@@ -50,7 +57,8 @@ export default function Chat() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           messages: [...messages, userMessage],
-          profile 
+          profile,
+          action: customAction 
         })
       });
 
@@ -75,6 +83,24 @@ export default function Chat() {
     window.location.reload();
   };
 
+  const downloadPDF = async () => {
+    if (typeof window === "undefined" || !chatContainerRef.current) return;
+    
+    // Dynamically import html2pdf to avoid SSR issues
+    const html2pdf = (await import("html2pdf.js")).default;
+    
+    const element = chatContainerRef.current;
+    const opt = {
+      margin:       1,
+      filename:     `${profile?.subject}_Notes.pdf`,
+      image:        { type: 'jpeg', quality: 0.98 },
+      html2canvas:  { scale: 2, useCORS: true },
+      jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+    };
+
+    html2pdf().set(opt).from(element).save();
+  };
+
   if (!profile) return null;
 
   return (
@@ -86,15 +112,23 @@ export default function Chat() {
           </div>
           <div>
             <h1 className="font-bold text-lg leading-tight">EduBridge AI</h1>
-            <p className="text-xs text-slate-400">{profile.subject} • {profile.level}</p>
+            <p className="text-xs text-slate-400">{profile.subject} • {profile.level} • {profile.language || 'English'}</p>
           </div>
         </div>
-        <button onClick={handleLogout} className="text-slate-400 hover:text-white transition-colors" title="Reset Profile">
-          <LogOut className="w-5 h-5" />
-        </button>
+        <div className="flex items-center space-x-2">
+          <button onClick={() => handleSubmit(undefined, "career")} className="text-blue-400 hover:text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 px-3 py-1.5 rounded-lg flex items-center text-sm font-medium transition-colors" title="Career Guidance">
+            <Briefcase className="w-4 h-4 mr-1.5" /> Career
+          </button>
+          <button onClick={downloadPDF} className="text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg flex items-center text-sm font-medium transition-colors" title="Download PDF Notes">
+            <Download className="w-4 h-4 mr-1.5" /> PDF
+          </button>
+          <button onClick={handleLogout} className="text-slate-400 hover:text-white transition-colors ml-2" title="Reset Profile">
+            <LogOut className="w-5 h-5" />
+          </button>
+        </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+      <div className="flex-1 overflow-y-auto p-6 space-y-6" id="chat-container" ref={chatContainerRef}>
         {messages.map((msg, i) => (
           <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
             <div className={`flex space-x-3 max-w-[85%] ${msg.role === "user" ? "flex-row-reverse space-x-reverse" : "flex-row"}`}>
@@ -126,7 +160,7 @@ export default function Chat() {
       </div>
 
       <div className="p-4 bg-slate-900 border-t border-slate-800">
-        <form onSubmit={handleSubmit} className="flex items-end space-x-2 bg-slate-800 p-2 rounded-2xl border border-slate-700 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all">
+        <form onSubmit={e => handleSubmit(e)} className="flex items-end space-x-2 bg-slate-800 p-2 rounded-2xl border border-slate-700 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all">
           <textarea
             value={input}
             onChange={e => setInput(e.target.value)}

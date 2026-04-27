@@ -1,10 +1,8 @@
 import { NextResponse } from 'next/server';
 import { Groq } from 'groq-sdk';
 
-// Groq client will be initialized inside the handler to avoid caching old env vars during hot reloads
-
 // Helper to construct the system prompt based on user profile
-function buildSystemPrompt(profile: any) {
+function buildSystemPrompt(profile: any, action: string) {
   let complexity = "";
   if (profile.level === "Beginner") {
     complexity = "Use very simple language, analogies, and short sentences. Avoid jargon entirely. Explain as if speaking to a 10-year-old.";
@@ -14,9 +12,12 @@ function buildSystemPrompt(profile: any) {
     complexity = "Provide deep technical dives, complex challenges, and real-world applications. Do not hold back on advanced terminology.";
   }
 
-  return `You are EduBridge AI, a friendly, patient, and highly encouraging AI tutor specifically designed for underserved students. 
+  const baseLanguage = profile.language || "English";
+  let prompt = `You are EduBridge AI, a friendly, patient, and highly encouraging AI tutor specifically designed for underserved students. 
 Your student's name is ${profile.name}. 
 They are learning ${profile.subject} at a ${profile.level} level.
+
+CRITICAL REQUIREMENT: You MUST respond entirely in ${baseLanguage}.
 
 CORE INSTRUCTIONS:
 1. ${complexity}
@@ -26,17 +27,26 @@ CORE INSTRUCTIONS:
 5. AFTER EXPLAINING a new concept, ALWAYS ask 1 or 2 short, simple questions (a mini-quiz) to check their understanding before moving on.
 6. If they struggle with the quiz, gently correct them and try explaining it in a slightly different, simpler way.
 7. Use Markdown for formatting (bolding key terms, using bullet points, etc).`;
+
+  if (action === "career") {
+    prompt += `\n\nSPECIAL REQUEST: The user just asked for CAREER GUIDANCE. Please ignore normal tutoring for this response and instead:
+    - Suggest 3 real-world, accessible career paths related to ${profile.subject}.
+    - Explain simply how what they are learning applies to these jobs.
+    - End with a highly motivating statement.`;
+  }
+
+  return prompt;
 }
 
 export async function POST(req: Request) {
   try {
-    const { messages, profile } = await req.json();
+    const { messages, profile, action } = await req.json();
 
     if (!profile) {
       return NextResponse.json({ error: "Profile missing" }, { status: 400 });
     }
 
-    const systemPrompt = buildSystemPrompt(profile);
+    const systemPrompt = buildSystemPrompt(profile, action);
     
     // Inject system prompt at the beginning
     const apiMessages = [
@@ -56,6 +66,10 @@ export async function POST(req: Request) {
          mockReply += "\n\nSince you're a beginner, think of it like this: it's like learning to ride a bike. Let's start with training wheels.\n\n* **Step 1:** Balance\n* **Step 2:** Pedal\n\n### Quick Quiz\nDo you want to try a practice question about this?";
       } else {
          mockReply += "\n\nLet's dive deeper into that. Here is a step-by-step breakdown...\n\n### Application\nNow, how would you apply this to a real-world problem?";
+      }
+
+      if (action === "career") {
+        mockReply = `Here are 3 great careers using **${profile.subject}**:\n1. **Teacher:** Share your knowledge.\n2. **Analyst:** Use facts to make decisions.\n3. **Engineer:** Build the future.\n\nYou have what it takes!`;
       }
 
       return NextResponse.json({ reply: mockReply });
