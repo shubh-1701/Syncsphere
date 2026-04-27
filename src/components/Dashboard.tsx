@@ -1,23 +1,33 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { BookOpen, Flame, Trophy, Play, Settings, Star, LogOut, Trash2, Edit3 } from "lucide-react";
+import { BookOpen, Flame, Trophy, Play, Settings, Star, LogOut, Trash2, Edit3, Map, CheckCircle2, Loader2 } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 
 interface Props {
   onStartChat: () => void;
 }
 
+interface RoadmapStep {
+  step: number;
+  title: string;
+  description: string;
+}
+
 export default function Dashboard({ onStartChat }: Props) {
   const [profile, setProfile] = useState<{name: string, subject: string, level: string, language?: string} | null>(null);
   const [xp, setXp] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
+  const [roadmap, setRoadmap] = useState<RoadmapStep[]>([]);
+  const [isLoadingRoadmap, setIsLoadingRoadmap] = useState(false);
   const settingsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const p = localStorage.getItem("edu_profile");
     if (p) {
-      setProfile(JSON.parse(p));
+      const parsed = JSON.parse(p);
+      setProfile(parsed);
+      fetchRoadmap(parsed);
     }
     const storedXp = parseInt(localStorage.getItem("edu_xp") || "0");
     setXp(storedXp);
@@ -30,6 +40,32 @@ export default function Dashboard({ onStartChat }: Props) {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  const fetchRoadmap = async (userProfile: any) => {
+    const cached = localStorage.getItem(`edu_roadmap_${userProfile.subject}`);
+    if (cached) {
+      setRoadmap(JSON.parse(cached));
+      return;
+    }
+    
+    setIsLoadingRoadmap(true);
+    try {
+      const res = await fetch("/api/roadmap", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ profile: userProfile })
+      });
+      const data = await res.json();
+      if (data.roadmap) {
+        setRoadmap(data.roadmap);
+        localStorage.setItem(`edu_roadmap_${userProfile.subject}`, JSON.stringify(data.roadmap));
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsLoadingRoadmap(false);
+    }
+  };
 
   if (!profile) return null;
 
@@ -61,6 +97,7 @@ export default function Dashboard({ onStartChat }: Props) {
         localStorage.removeItem("edu_profile");
         localStorage.removeItem("edu_auth_token");
         localStorage.removeItem("edu_chats");
+        localStorage.removeItem("edu_xp");
         window.location.reload();
       }
     }
@@ -137,38 +174,46 @@ export default function Dashboard({ onStartChat }: Props) {
           <p className="text-xs text-right text-slate-500">{Math.max(0, nextGoal - xp)} XP to next rank</p>
         </motion.div>
 
-        {/* Quick Stats */}
-        <div className="grid grid-cols-2 gap-4">
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-            className="bg-orange-500/10 border border-orange-500/20 p-5 rounded-3xl flex items-center space-x-4"
-          >
-            <div className="bg-orange-500/20 p-3 rounded-2xl">
-              <Flame className="w-8 h-8 text-orange-400" />
+        {/* Study Roadmap */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+          className="bg-slate-800/50 border border-slate-700/50 p-6 rounded-3xl"
+        >
+          <div className="flex items-center space-x-3 mb-6">
+            <div className="bg-emerald-500/20 p-2 rounded-xl">
+              <Map className="w-5 h-5 text-emerald-400" />
             </div>
-            <div>
-              <p className="text-sm text-orange-200/60 font-medium">Daily Streak</p>
-              <p className="text-2xl font-bold text-orange-400">3 Days</p>
-            </div>
-          </motion.div>
+            <h3 className="text-lg font-bold text-white">Your Learning Roadmap</h3>
+          </div>
           
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-            className="bg-blue-500/10 border border-blue-500/20 p-5 rounded-3xl flex items-center space-x-4"
-          >
-            <div className="bg-blue-500/20 p-3 rounded-2xl">
-              <Trophy className="w-8 h-8 text-blue-400" />
+          {isLoadingRoadmap ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-emerald-400" />
+              <span className="ml-3 text-slate-400 text-sm">Generating your personalized path...</span>
             </div>
-            <div>
-              <p className="text-sm text-blue-200/60 font-medium">Mastery Level</p>
-              <p className="text-2xl font-bold text-blue-400">{profile.level}</p>
+          ) : roadmap.length > 0 ? (
+            <div className="relative border-l-2 border-slate-700 ml-4 space-y-6">
+              {roadmap.map((step, index) => {
+                const isCompleted = xp >= (index + 1) * 30; // Mock progression based on XP
+                return (
+                  <div key={index} className="relative pl-6">
+                    <div className={`absolute -left-[11px] top-1 rounded-full p-0.5 ${isCompleted ? 'bg-emerald-500' : 'bg-slate-700'}`}>
+                      <CheckCircle2 className={`w-4 h-4 ${isCompleted ? 'text-white' : 'text-slate-500'}`} />
+                    </div>
+                    <h4 className={`font-bold text-sm mb-1 ${isCompleted ? 'text-emerald-400' : 'text-white'}`}>Step {step.step}: {step.title}</h4>
+                    <p className="text-xs text-slate-400 leading-relaxed">{step.description}</p>
+                  </div>
+                )
+              })}
             </div>
-          </motion.div>
-        </div>
+          ) : (
+            <p className="text-slate-500 text-sm italic">Unable to load roadmap.</p>
+          )}
+        </motion.div>
 
         {/* Current Focus */}
         <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3 }}
+          initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }}
           className="bg-slate-800 border border-slate-700 p-8 rounded-3xl relative overflow-hidden"
         >
           <div className="absolute top-0 right-0 p-8 opacity-10">

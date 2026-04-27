@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Send, Bot, User, Sparkles, Loader2, LogOut, Download, Briefcase, ArrowLeft, Volume2, Mic, MicOff } from "lucide-react";
+import { Send, Bot, User, Sparkles, Loader2, LogOut, Download, Briefcase, ArrowLeft, Volume2, Mic, MicOff, HelpCircle, Play } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import Flashcard from "./Flashcard";
 
 interface Message {
   role: "system" | "user" | "assistant";
@@ -43,7 +44,6 @@ export default function Chat({ onBack }: Props) {
       }
     }
 
-    // Initialize Speech Recognition if available
     if (typeof window !== "undefined" && ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       recognitionRef.current = new SpeechRecognition();
@@ -104,13 +104,15 @@ export default function Chat({ onBack }: Props) {
     }
   };
 
-  const handleSubmit = async (e?: React.FormEvent, customAction?: "career") => {
+  const handleSubmit = async (e?: React.FormEvent, customAction?: "career" | "quiz") => {
     if (e) e.preventDefault();
     if ((!input.trim() && !customAction) || isLoading) return;
 
     let userMessageContent = input;
     if (customAction === "career") {
       userMessageContent = "How can I use this in my future career?";
+    } else if (customAction === "quiz") {
+      userMessageContent = "Quiz me on what we just learned!";
     }
 
     const userMessage = { role: "user" as const, content: userMessageContent };
@@ -150,13 +152,6 @@ export default function Chat({ onBack }: Props) {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("edu_profile");
-    localStorage.removeItem("edu_auth_token");
-    localStorage.removeItem("edu_chats");
-    window.location.reload();
-  };
-
   const downloadPDF = async () => {
     if (typeof window === "undefined" || !chatContainerRef.current) return;
     const html2pdf = (await import("html2pdf.js")).default;
@@ -171,6 +166,46 @@ export default function Chat({ onBack }: Props) {
     html2pdf().set(opt).from(element).save();
   };
 
+  const renderMessageContent = (content: string, isAssistant: boolean) => {
+    if (isAssistant) {
+      try {
+        const parsed = JSON.parse(content);
+        if (Array.isArray(parsed) && parsed[0]?.question && parsed[0]?.answer) {
+          return (
+            <div className="flex flex-col space-y-4 w-full min-w-[280px]">
+              {parsed.map((card, idx) => (
+                <Flashcard key={idx} question={card.question} answer={card.answer} />
+              ))}
+            </div>
+          );
+        }
+      } catch(e) {
+        // Not JSON, continue to normal render
+      }
+    }
+
+    return (
+      <div className="prose prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-slate-900 prose-pre:border prose-pre:border-slate-700">
+        <ReactMarkdown
+          components={{
+            a: ({node, ...props}) => {
+              if (props.children?.toString().includes("Watch Video Tutorial")) {
+                return (
+                  <a {...props} target="_blank" rel="noopener noreferrer" className="inline-flex items-center bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-4 rounded-xl no-underline transition-colors mt-2 shadow-lg shadow-red-900/20">
+                    <Play className="w-4 h-4 mr-2" /> {props.children}
+                  </a>
+                );
+              }
+              return <a {...props} />;
+            }
+          }}
+        >
+          {content}
+        </ReactMarkdown>
+      </div>
+    );
+  };
+
   if (!profile) return null;
 
   return (
@@ -180,15 +215,18 @@ export default function Chat({ onBack }: Props) {
           <button onClick={onBack} className="text-slate-400 hover:text-white mr-2 transition-colors">
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <div className="bg-blue-500/20 p-2 rounded-lg">
+          <div className="bg-blue-500/20 p-2 rounded-lg hidden sm:block">
             <Sparkles className="w-5 h-5 text-blue-400" />
           </div>
           <div>
             <h1 className="font-bold text-lg leading-tight">EduBridge AI</h1>
-            <p className="text-xs text-slate-400">{profile.subject} • {profile.level}</p>
+            <p className="text-xs text-slate-400 hidden sm:block">{profile.subject} • {profile.level}</p>
           </div>
         </div>
         <div className="flex items-center space-x-2">
+          <button onClick={() => handleSubmit(undefined, "quiz")} className="text-purple-400 hover:text-purple-300 bg-purple-500/10 hover:bg-purple-500/20 px-3 py-1.5 rounded-lg flex items-center text-sm font-medium transition-colors" title="Quiz Me">
+            <HelpCircle className="w-4 h-4 md:mr-1.5" /> <span className="hidden md:inline">Quiz Me</span>
+          </button>
           <button onClick={() => handleSubmit(undefined, "career")} className="text-blue-400 hover:text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 px-3 py-1.5 rounded-lg flex items-center text-sm font-medium transition-colors" title="Career Guidance">
             <Briefcase className="w-4 h-4 md:mr-1.5" /> <span className="hidden md:inline">Career</span>
           </button>
@@ -206,9 +244,9 @@ export default function Chat({ onBack }: Props) {
                 {msg.role === "user" ? <User className="w-5 h-5 text-white" /> : <Bot className="w-5 h-5 text-blue-400" />}
               </div>
               <div className={`rounded-2xl px-5 py-4 relative group ${msg.role === "user" ? "bg-blue-600 text-white rounded-tr-sm" : "bg-slate-800 border border-slate-700 text-slate-200 rounded-tl-sm shadow-sm"}`}>
-                <div className="prose prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-slate-900 prose-pre:border prose-pre:border-slate-700">
-                  <ReactMarkdown>{msg.content}</ReactMarkdown>
-                </div>
+                
+                {renderMessageContent(msg.content, msg.role === "assistant")}
+
                 {msg.role === "assistant" && (
                   <button 
                     onClick={() => speakText(msg.content)}

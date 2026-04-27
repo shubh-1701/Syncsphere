@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { Groq } from 'groq-sdk';
 
-// Helper to construct the system prompt based on user profile
 function buildSystemPrompt(profile: any, action: string) {
   let complexity = "";
   if (profile.level === "Beginner") {
@@ -16,6 +15,8 @@ function buildSystemPrompt(profile: any, action: string) {
   
   const visualInstruction = `\n\nVISUAL LEARNING: Whenever you introduce a tangible or visual concept (e.g., a planet, an animal, a historical event, a machine), embed a relevant image. Format exactly like this: ![Image Description](https://image.pollinations.ai/prompt/{detailed-description}?width=800&height=400&nologo=true) . Replace {detailed-description} with URL-encoded keywords. Do not do this for abstract concepts.`;
 
+  const videoInstruction = `\n\nMULTIMEDIA LEARNING: Whenever you explain a core, highly complex concept, embed a YouTube search link for them to watch a tutorial. Format exactly like this: [🎥 Watch Video Tutorial](https://www.youtube.com/results?search_query={URL-encoded-topic})`;
+
   let prompt = `You are EduBridge AI, a friendly, patient, and highly encouraging AI tutor specifically designed for underserved students. 
 Your student's name is ${profile.name}. 
 They are learning ${profile.subject} at a ${profile.level} level.
@@ -24,18 +25,29 @@ CRITICAL REQUIREMENT: You MUST respond entirely in ${baseLanguage}.
 
 CORE INSTRUCTIONS:
 1. ${complexity}
-2. BE ENCOURAGING: Always validate their effort and use a warm, supportive tone (e.g., "Great question!", "You're doing awesome!").
+2. BE ENCOURAGING: Always validate their effort and use a warm, supportive tone.
 3. NEVER be judgmental.
 4. BE CONCISE: Do not output massive walls of text. Break down explanations into small, digestible chunks.
 5. AFTER EXPLAINING a new concept, ALWAYS ask 1 or 2 short, simple questions (a mini-quiz) to check their understanding before moving on.
 6. If they struggle with the quiz, gently correct them and try explaining it in a slightly different, simpler way.
-7. Use Markdown for formatting (bolding key terms, using bullet points, etc).${visualInstruction}`;
+7. Use Markdown for formatting (bolding key terms, using bullet points, etc).${visualInstruction}${videoInstruction}`;
 
   if (action === "career") {
     prompt += `\n\nSPECIAL REQUEST: The user just asked for CAREER GUIDANCE. Please ignore normal tutoring for this response and instead:
     - Suggest 3 real-world, accessible career paths related to ${profile.subject}.
     - Explain simply how what they are learning applies to these jobs.
     - End with a highly motivating statement.`;
+  }
+  
+  if (action === "quiz") {
+    prompt = `You are EduBridge AI. Generate a 3-question flashcard quiz based on the user's recent chat history about ${profile.subject}. 
+CRITICAL: You MUST respond ONLY with a raw JSON array. Do not include markdown code blocks (\`\`\`). Do not include any other text.
+Format strictly as:
+[
+  { "question": "Question 1 here?", "answer": "Answer 1 here." },
+  { "question": "Question 2 here?", "answer": "Answer 2 here." },
+  { "question": "Question 3 here?", "answer": "Answer 3 here." }
+]`;
   }
 
   return prompt;
@@ -51,24 +63,24 @@ export async function POST(req: Request) {
 
     const systemPrompt = buildSystemPrompt(profile, action);
     
-    // Inject system prompt at the beginning
-    const apiMessages = [
-      { role: "system", content: systemPrompt },
-      ...messages
-    ];
+    // For quiz action, we don't pass the whole history to save tokens, just the last few messages for context.
+    const apiMessages = action === "quiz" 
+      ? [{ role: "system", content: systemPrompt }, ...messages.slice(-4)] 
+      : [{ role: "system", content: systemPrompt }, ...messages];
 
-    // Check if real API key is present
     if (!process.env.GROQ_API_KEY || process.env.GROQ_API_KEY === 'dummy_key') {
-      // Mock mode fallback for Hackathon if no key
-      await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate delay
+      await new Promise(resolve => setTimeout(resolve, 1500)); 
       
-      const lastUserMsg = messages[messages.length - 1].content.toLowerCase();
       let mockReply = `That's a great question about **${profile.subject}**, ${profile.name}! `;
       
+      if (action === "quiz") {
+        return NextResponse.json({ reply: '[{"question": "What is the core concept we just discussed?", "answer": "The core concept."}, {"question": "How do you apply it?", "answer": "By practicing."}, {"question": "What is the next step?", "answer": "Mastery."}]' });
+      }
+
       if (profile.level === "Beginner") {
-         mockReply += "\n\nSince you're a beginner, think of it like this: it's like learning to ride a bike. Let's start with training wheels.\n\n* **Step 1:** Balance\n* **Step 2:** Pedal\n\n### Quick Quiz\nDo you want to try a practice question about this?";
+         mockReply += "\n\nSince you're a beginner, think of it like this: it's like learning to ride a bike. \n\n![Bike](https://image.pollinations.ai/prompt/bicycle?width=800&height=400&nologo=true)\n\n[🎥 Watch Video Tutorial](https://www.youtube.com/results?search_query=how+to+ride+a+bike)";
       } else {
-         mockReply += "\n\nLet's dive deeper into that. Here is a step-by-step breakdown...\n\n### Application\nNow, how would you apply this to a real-world problem?";
+         mockReply += "\n\nLet's dive deeper into that. Here is a step-by-step breakdown...\n\n[🎥 Watch Video Tutorial](https://www.youtube.com/results?search_query=advanced+topics)";
       }
 
       if (action === "career") {
@@ -78,20 +90,21 @@ export async function POST(req: Request) {
       return NextResponse.json({ reply: mockReply });
     }
 
-    // Initialize Groq here to ensure it uses the latest process.env value
-    const groq = new Groq({
-      apiKey: process.env.GROQ_API_KEY,
-    });
+    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-    // Call Groq API
     const chatCompletion = await groq.chat.completions.create({
-      messages: apiMessages,
-      model: "llama-3.1-8b-instant", // Updated to the current supported model
-      temperature: 0.7,
-      max_tokens: 1024,
+      messages: apiMessages as any,
+      model: "llama-3.1-8b-instant",
+      temperature: action === "quiz" ? 0.2 : 0.7,
+      max_tokens: action === "quiz" ? 500 : 1024,
     });
 
-    const reply = chatCompletion.choices[0]?.message?.content || "I'm sorry, I couldn't process that right now.";
+    let reply = chatCompletion.choices[0]?.message?.content || "I'm sorry, I couldn't process that right now.";
+    
+    // Clean up markdown block if Groq stubbornly adds it for JSON
+    if (action === "quiz") {
+      reply = reply.replace(/```json/gi, "").replace(/```/g, "").trim();
+    }
 
     return NextResponse.json({ reply });
   } catch (error) {
