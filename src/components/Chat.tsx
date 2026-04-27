@@ -129,6 +129,12 @@ export default function Chat({ onBack }: Props) {
       
       const data = await res.json();
       setMessages(prev => [...prev, { role: "assistant", content: data.reply }]);
+      
+      // Add XP
+      if (!customAction) {
+        const currentXP = parseInt(localStorage.getItem("edu_xp") || "0");
+        localStorage.setItem("edu_xp", (currentXP + 10).toString());
+      }
     } catch (error) {
       console.error(error);
       const errorMessage = error instanceof Error ? error.message : "Oops! Something went wrong.";

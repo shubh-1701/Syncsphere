@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { GraduationCap, ArrowRight, BookOpen, Sparkles, Globe } from "lucide-react";
+import confetti from "canvas-confetti";
 
 interface Props {
   onComplete: () => void;
@@ -16,8 +17,16 @@ export default function Onboarding({ onComplete }: Props) {
   const [language, setLanguage] = useState("");
 
   const handleComplete = () => {
+    confetti({
+      particleCount: 150,
+      spread: 80,
+      origin: { y: 0.6 },
+      colors: ['#3b82f6', '#a855f7', '#ffffff']
+    });
     localStorage.setItem("edu_profile", JSON.stringify({ name, subject, level, language }));
-    onComplete();
+    setTimeout(() => {
+      onComplete();
+    }, 1500);
   };
 
   return (

@@ -13,6 +13,9 @@ function buildSystemPrompt(profile: any, action: string) {
   }
 
   const baseLanguage = profile.language || "English";
+  
+  const visualInstruction = `\n\nVISUAL LEARNING: Whenever you introduce a tangible or visual concept (e.g., a planet, an animal, a historical event, a machine), embed a relevant image. Format exactly like this: ![Image Description](https://image.pollinations.ai/prompt/{detailed-description}?width=800&height=400&nologo=true) . Replace {detailed-description} with URL-encoded keywords. Do not do this for abstract concepts.`;
+
   let prompt = `You are EduBridge AI, a friendly, patient, and highly encouraging AI tutor specifically designed for underserved students. 
 Your student's name is ${profile.name}. 
 They are learning ${profile.subject} at a ${profile.level} level.
@@ -26,7 +29,7 @@ CORE INSTRUCTIONS:
 4. BE CONCISE: Do not output massive walls of text. Break down explanations into small, digestible chunks.
 5. AFTER EXPLAINING a new concept, ALWAYS ask 1 or 2 short, simple questions (a mini-quiz) to check their understanding before moving on.
 6. If they struggle with the quiz, gently correct them and try explaining it in a slightly different, simpler way.
-7. Use Markdown for formatting (bolding key terms, using bullet points, etc).`;
+7. Use Markdown for formatting (bolding key terms, using bullet points, etc).${visualInstruction}`;
 
   if (action === "career") {
     prompt += `\n\nSPECIAL REQUEST: The user just asked for CAREER GUIDANCE. Please ignore normal tutoring for this response and instead:
