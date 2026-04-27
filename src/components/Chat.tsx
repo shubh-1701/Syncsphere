@@ -80,6 +80,7 @@ export default function Chat() {
 
   const handleLogout = () => {
     localStorage.removeItem("edu_profile");
+    localStorage.removeItem("edu_auth_token");
     window.location.reload();
   };
 
