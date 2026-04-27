@@ -3,11 +3,13 @@
 import { useState, useEffect } from "react";
 import Login from "@/components/Login";
 import Onboarding from "@/components/Onboarding";
+import Dashboard from "@/components/Dashboard";
 import Chat from "@/components/Chat";
 
 export default function Home() {
   const [isAuth, setIsAuth] = useState<boolean | null>(null);
   const [hasProfile, setHasProfile] = useState<boolean | null>(null);
+  const [showChat, setShowChat] = useState<boolean>(false);
   
   useEffect(() => {
     const token = localStorage.getItem("edu_auth_token");
@@ -26,8 +28,10 @@ export default function Home() {
         <Login onLogin={() => setIsAuth(true)} />
       ) : !hasProfile ? (
         <Onboarding onComplete={() => setHasProfile(true)} />
+      ) : !showChat ? (
+        <Dashboard onStartChat={() => setShowChat(true)} />
       ) : (
-        <Chat />
+        <Chat onBack={() => setShowChat(false)} />
       )}
     </main>
   );
