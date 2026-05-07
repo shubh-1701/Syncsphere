@@ -16,7 +16,7 @@ interface RoadmapStep {
 }
 
 export default function Dashboard({ onStartChat }: Props) {
-  const [profile, setProfile] = useState<{name: string, subject: string, level: string, language?: string} | null>(null);
+  const [profile, setProfile] = useState<{name: string, subject: string, level?: string, standard?: string, language?: string} | null>(null);
   const [xp, setXp] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
   const [roadmap, setRoadmap] = useState<RoadmapStep[]>([]);
@@ -231,7 +231,7 @@ export default function Dashboard({ onStartChat }: Props) {
             
             <div className="flex items-center space-x-4">
               <span className="bg-slate-700 px-3 py-1 rounded-full text-sm">{profile.language || 'English'}</span>
-              <span className="bg-slate-700 px-3 py-1 rounded-full text-sm">{profile.level}</span>
+              <span className="bg-slate-700 px-3 py-1 rounded-full text-sm">{profile.standard || profile.level}</span>
             </div>
 
             <button 

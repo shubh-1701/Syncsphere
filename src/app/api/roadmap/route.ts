@@ -9,8 +9,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Profile missing" }, { status: 400 });
     }
 
-    const systemPrompt = `You are EduBridge AI, an expert curriculum designer. The user is studying ${profile.subject} at a ${profile.level} level. 
-Generate a 5-step learning roadmap for them. 
+    const standard = profile.standard || profile.level;
+    const systemPrompt = `You are EduBridge AI, an expert curriculum designer. The user is in ${standard} and studying ${profile.subject}. 
+Generate a 5-step learning roadmap perfectly tailored for a student in ${standard}.
 CRITICAL: You MUST respond ONLY with a raw JSON array. Do not include markdown code blocks (\`\`\`). Do not include any other text.
 Format strictly as:
 [

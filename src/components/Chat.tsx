@@ -20,7 +20,7 @@ export default function Chat({ onBack }: Props) {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
-  const [profile, setProfile] = useState<{name: string, subject: string, level: string, language?: string} | null>(null);
+  const [profile, setProfile] = useState<{name: string, subject: string, level?: string, standard?: string, language?: string} | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
@@ -35,11 +35,12 @@ export default function Chat({ onBack }: Props) {
         if (savedChats && Array.isArray(savedChats) && savedChats.length > 0) {
           setMessages(savedChats);
         } else {
+          const standard = p.standard || p.level;
           const greetingLang = p.language === "Spanish" ? "Hola" : p.language === "French" ? "Bonjour" : p.language === "Hindi" ? "नमस्ते" : "Hi";
           setMessages([
             {
               role: "assistant",
-              content: `${greetingLang} ${p.name}! I'm excited to help you learn **${p.subject}** at a **${p.level}** level. \n\nWhat specific topic would you like to start with?`
+              content: `${greetingLang} ${p.name}! I'm excited to help you learn **${p.subject}** for **${standard}**. \n\nWhat specific topic would you like to start with?`
             }
           ]);
         }
@@ -224,7 +225,7 @@ export default function Chat({ onBack }: Props) {
           </div>
           <div>
             <h1 className="font-bold text-lg leading-tight">EduBridge AI</h1>
-            <p className="text-xs text-slate-400 hidden sm:block">{profile.subject} • {profile.level}</p>
+            <p className="text-xs text-slate-400 hidden sm:block">{profile.subject} • {profile.standard || profile.level}</p>
           </div>
         </div>
         <div className="flex items-center space-x-2">

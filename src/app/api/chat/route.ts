@@ -2,14 +2,9 @@ import { NextResponse } from 'next/server';
 import { Groq } from 'groq-sdk';
 
 function buildSystemPrompt(profile: any, action: string) {
-  let complexity = "";
-  if (profile.level === "Beginner") {
-    complexity = "Use very simple language, analogies, and short sentences. Avoid jargon entirely. Explain as if speaking to a 10-year-old.";
-  } else if (profile.level === "Intermediate") {
-    complexity = "Use standard terminology but explain clearly. Provide structured explanations and step-by-step reasoning.";
-  } else if (profile.level === "Advanced") {
-    complexity = "Provide deep technical dives, complex challenges, and real-world applications. Do not hold back on advanced terminology.";
-  }
+  const standard = profile.standard || profile.level;
+  
+  const complexity = `Adjust your vocabulary, sentence structure, and core concepts to perfectly match a student in ${standard}. Explain things using analogies appropriate for their age group. Avoid overly complex jargon unless it is part of the curriculum for ${standard}.`;
 
   const baseLanguage = profile.language || "English";
   
@@ -19,7 +14,7 @@ function buildSystemPrompt(profile: any, action: string) {
 
   let prompt = `You are EduBridge AI, a friendly, patient, and highly encouraging AI tutor specifically designed for underserved students. 
 Your student's name is ${profile.name}. 
-They are learning ${profile.subject} at a ${profile.level} level.
+They are in ${standard} and learning ${profile.subject}.
 
 CRITICAL REQUIREMENT: You MUST respond entirely in ${baseLanguage}.
 
@@ -77,8 +72,8 @@ export async function POST(req: Request) {
         return NextResponse.json({ reply: '[{"question": "What is the core concept we just discussed?", "answer": "The core concept."}, {"question": "How do you apply it?", "answer": "By practicing."}, {"question": "What is the next step?", "answer": "Mastery."}]' });
       }
 
-      if (profile.level === "Beginner") {
-         mockReply += "\n\nSince you're a beginner, think of it like this: it's like learning to ride a bike. \n\n![Bike](https://image.pollinations.ai/prompt/bicycle?width=800&height=400&nologo=true)\n\n[🎥 Watch Video Tutorial](https://www.youtube.com/results?search_query=how+to+ride+a+bike)";
+      if (standard.includes("6") || standard.includes("7") || standard.includes("Primary")) {
+         mockReply += "\n\nThink of it like this: it's like learning to ride a bike. \n\n![Bike](https://image.pollinations.ai/prompt/bicycle?width=800&height=400&nologo=true)\n\n[🎥 Watch Video Tutorial](https://www.youtube.com/results?search_query=how+to+ride+a+bike)";
       } else {
          mockReply += "\n\nLet's dive deeper into that. Here is a step-by-step breakdown...\n\n[🎥 Watch Video Tutorial](https://www.youtube.com/results?search_query=advanced+topics)";
       }

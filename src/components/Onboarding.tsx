@@ -14,7 +14,7 @@ export default function Onboarding({ onComplete }: Props) {
   const [step, setStep] = useState(1);
   const [name, setName] = useState("");
   const [subject, setSubject] = useState("");
-  const [level, setLevel] = useState("");
+  const [standard, setStandard] = useState("");
   const [language, setLanguage] = useState("");
 
   const handleComplete = async () => {
@@ -24,14 +24,15 @@ export default function Onboarding({ onComplete }: Props) {
       origin: { y: 0.6 },
       colors: ['#3b82f6', '#a855f7', '#ffffff']
     });
-    await saveData("edu_profile", { name, subject, level, language });
+    // We save standard instead of level now
+    await saveData("edu_profile", { name, subject, level: standard, language, standard });
     setTimeout(() => {
       onComplete();
     }, 1500);
   };
 
   return (
-    <div className="flex flex-col items-center justify-center h-full p-6 relative">
+    <div className="flex flex-col items-center justify-center h-full p-6 relative overflow-y-auto">
       <AnimatePresence mode="wait">
         {step === 1 && (
           <motion.div key="step1" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -50 }} className="w-full max-w-md text-center">
@@ -53,17 +54,18 @@ export default function Onboarding({ onComplete }: Props) {
         {step === 2 && (
           <motion.div key="step2" initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }} className="w-full max-w-md">
             <div className="text-center mb-8">
-              <BookOpen className="w-10 h-10 text-blue-400 mx-auto mb-4" />
-              <h2 className="text-3xl font-bold font-heading mb-2">What do you want to learn?</h2>
+              <GraduationCap className="w-10 h-10 text-blue-400 mx-auto mb-4" />
+              <h2 className="text-3xl font-bold font-heading mb-2">Which Standard are you in?</h2>
+              <p className="text-slate-400">This helps us personalize your lessons.</p>
             </div>
-            <div className="space-y-3 mb-8">
-              {['Mathematics', 'Science', 'History', 'English', 'Computer Science'].map(sub => (
-                <button key={sub} onClick={() => setSubject(sub)} className={`w-full text-left px-6 py-4 rounded-xl border transition-all ${subject === sub ? 'bg-blue-600/20 border-blue-500 text-white' : 'bg-slate-800/50 border-slate-700 text-slate-300 hover:bg-slate-800'}`}>
-                  {sub}
+            <div className="grid grid-cols-2 gap-3 mb-8">
+              {['Class 6', 'Class 7', 'Class 8', 'Class 9', 'Class 10', 'Class 11', 'Class 12', 'College'].map(std => (
+                <button key={std} onClick={() => setStandard(std)} className={`w-full text-center px-4 py-3 rounded-xl border transition-all ${standard === std ? 'bg-blue-600/20 border-blue-500 text-white' : 'bg-slate-800/50 border-slate-700 text-slate-300 hover:bg-slate-800'}`}>
+                  {std}
                 </button>
               ))}
             </div>
-            <button onClick={() => setStep(3)} disabled={!subject} className="w-full bg-blue-600 disabled:bg-slate-700 text-white py-3.5 rounded-xl font-medium flex items-center justify-center transition-all">
+            <button onClick={() => setStep(3)} disabled={!standard} className="w-full bg-blue-600 disabled:bg-slate-700 text-white py-3.5 rounded-xl font-medium flex items-center justify-center transition-all">
               Continue <ArrowRight className="ml-2 w-4 h-4" />
             </button>
           </motion.div>
@@ -71,6 +73,25 @@ export default function Onboarding({ onComplete }: Props) {
 
         {step === 3 && (
           <motion.div key="step3" initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }} className="w-full max-w-md">
+            <div className="text-center mb-8">
+              <BookOpen className="w-10 h-10 text-blue-400 mx-auto mb-4" />
+              <h2 className="text-3xl font-bold font-heading mb-2">What do you want to learn?</h2>
+            </div>
+            <div className="grid grid-cols-2 gap-3 mb-8">
+              {['Mathematics', 'Physics', 'Chemistry', 'Biology', 'Computer Science', 'English', 'History', 'Geography'].map(sub => (
+                <button key={sub} onClick={() => setSubject(sub)} className={`w-full text-left px-4 py-3 rounded-xl border transition-all ${subject === sub ? 'bg-blue-600/20 border-blue-500 text-white' : 'bg-slate-800/50 border-slate-700 text-slate-300 hover:bg-slate-800'}`}>
+                  {sub}
+                </button>
+              ))}
+            </div>
+            <button onClick={() => setStep(4)} disabled={!subject} className="w-full bg-blue-600 disabled:bg-slate-700 text-white py-3.5 rounded-xl font-medium flex items-center justify-center transition-all">
+              Continue <ArrowRight className="ml-2 w-4 h-4" />
+            </button>
+          </motion.div>
+        )}
+
+        {step === 4 && (
+          <motion.div key="step4" initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} className="w-full max-w-md">
             <div className="text-center mb-8">
               <Globe className="w-10 h-10 text-blue-400 mx-auto mb-4" />
               <h2 className="text-3xl font-bold font-heading mb-2">Select Your Language</h2>
@@ -83,29 +104,7 @@ export default function Onboarding({ onComplete }: Props) {
                 </button>
               ))}
             </div>
-            <button onClick={() => setStep(4)} disabled={!language} className="w-full bg-blue-600 disabled:bg-slate-700 text-white py-3.5 rounded-xl font-medium flex items-center justify-center transition-all">
-              Continue <ArrowRight className="ml-2 w-4 h-4" />
-            </button>
-          </motion.div>
-        )}
-
-        {step === 4 && (
-          <motion.div key="step4" initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} className="w-full max-w-md">
-            <div className="text-center mb-8">
-              <GraduationCap className="w-10 h-10 text-blue-400 mx-auto mb-4" />
-              <h2 className="text-3xl font-bold font-heading mb-2">What is your current level?</h2>
-            </div>
-            <div className="space-y-3 mb-8">
-              {['Beginner', 'Intermediate', 'Advanced'].map(lvl => (
-                <button key={lvl} onClick={() => setLevel(lvl)} className={`w-full text-left px-6 py-4 rounded-xl border transition-all ${level === lvl ? 'bg-blue-600/20 border-blue-500 text-white' : 'bg-slate-800/50 border-slate-700 text-slate-300 hover:bg-slate-800'}`}>
-                  <span className="font-semibold block mb-1">{lvl}</span>
-                  <span className="text-xs opacity-70">
-                    {lvl === 'Beginner' ? "I'm just starting out." : lvl === 'Intermediate' ? "I know the basics." : "I want a challenge."}
-                  </span>
-                </button>
-              ))}
-            </div>
-            <button onClick={handleComplete} disabled={!level} className="w-full bg-emerald-600 disabled:bg-slate-700 text-white py-4 rounded-xl font-bold flex items-center justify-center transition-all shadow-lg hover:shadow-emerald-500/25">
+            <button onClick={handleComplete} disabled={!language} className="w-full bg-emerald-600 disabled:bg-slate-700 text-white py-4 rounded-xl font-bold flex items-center justify-center transition-all shadow-lg hover:shadow-emerald-500/25">
               Start Learning <Sparkles className="ml-2 w-5 h-5" />
             </button>
           </motion.div>
