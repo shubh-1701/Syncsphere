@@ -3,6 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { BookOpen, Flame, Trophy, Play, Settings, Star, LogOut, Trash2, Edit3, Map, CheckCircle2, Loader2 } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
+import { loadData, removeData } from "@/lib/db";
 
 interface Props {
   onStartChat: () => void;
@@ -23,14 +24,16 @@ export default function Dashboard({ onStartChat }: Props) {
   const settingsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const p = localStorage.getItem("edu_profile");
-    if (p) {
-      const parsed = JSON.parse(p);
-      setProfile(parsed);
-      fetchRoadmap(parsed);
-    }
-    const storedXp = parseInt(localStorage.getItem("edu_xp") || "0");
-    setXp(storedXp);
+    const initData = async () => {
+      const p = await loadData("edu_profile");
+      if (p) {
+        setProfile(p);
+        fetchRoadmap(p);
+      }
+      const storedXp = await loadData("edu_xp");
+      setXp(parseInt(storedXp || "0"));
+    };
+    initData();
 
     const handleClickOutside = (event: MouseEvent) => {
       if (settingsRef.current && !settingsRef.current.contains(event.target as Node)) {
@@ -42,9 +45,10 @@ export default function Dashboard({ onStartChat }: Props) {
   }, []);
 
   const fetchRoadmap = async (userProfile: any) => {
-    const cached = localStorage.getItem(`edu_roadmap_${userProfile.subject}`);
+    const cacheKey = `edu_roadmap_${userProfile.subject}`;
+    const cached = await loadData(cacheKey);
     if (cached) {
-      setRoadmap(JSON.parse(cached));
+      setRoadmap(cached);
       return;
     }
     
@@ -58,7 +62,9 @@ export default function Dashboard({ onStartChat }: Props) {
       const data = await res.json();
       if (data.roadmap) {
         setRoadmap(data.roadmap);
-        localStorage.setItem(`edu_roadmap_${userProfile.subject}`, JSON.stringify(data.roadmap));
+        // We use localStorage directly here for the cache to avoid uploading this to Firebase
+        // since it can just be re-generated, but using saveData is fine too.
+        localStorage.setItem(cacheKey, JSON.stringify(data.roadmap));
       }
     } catch (e) {
       console.error(e);
@@ -81,23 +87,23 @@ export default function Dashboard({ onStartChat }: Props) {
   
   const progressPercent = Math.min(100, Math.round((xp / nextGoal) * 100));
 
-  const handleAction = (action: "clear_chat" | "edit_profile" | "logout") => {
+  const handleAction = async (action: "clear_chat" | "edit_profile" | "logout") => {
     if (action === "clear_chat") {
       if (confirm("Are you sure you want to clear your chat history?")) {
-        localStorage.removeItem("edu_chats");
+        await removeData("edu_chats");
         alert("Chat history cleared!");
       }
     } else if (action === "edit_profile") {
       if (confirm("This will reset your learning profile but keep your XP. Continue?")) {
-        localStorage.removeItem("edu_profile");
+        await removeData("edu_profile");
         window.location.reload();
       }
     } else if (action === "logout") {
       if (confirm("Are you sure you want to log out completely?")) {
-        localStorage.removeItem("edu_profile");
+        await removeData("edu_profile");
         localStorage.removeItem("edu_auth_token");
-        localStorage.removeItem("edu_chats");
-        localStorage.removeItem("edu_xp");
+        await removeData("edu_chats");
+        await removeData("edu_xp");
         window.location.reload();
       }
     }

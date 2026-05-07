@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { Send, Bot, User, Sparkles, Loader2, LogOut, Download, Briefcase, ArrowLeft, Volume2, Mic, MicOff, HelpCircle, Play } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import Flashcard from "./Flashcard";
+import { saveData, loadData } from "@/lib/db";
 
 interface Message {
   role: "system" | "user" | "assistant";
@@ -25,24 +26,26 @@ export default function Chat({ onBack }: Props) {
   const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
-    const p = localStorage.getItem("edu_profile");
-    if (p) {
-      const parsed = JSON.parse(p);
-      setProfile(parsed);
-      
-      const savedChats = localStorage.getItem("edu_chats");
-      if (savedChats) {
-        setMessages(JSON.parse(savedChats));
-      } else {
-        const greetingLang = parsed.language === "Spanish" ? "Hola" : parsed.language === "French" ? "Bonjour" : parsed.language === "Hindi" ? "नमस्ते" : "Hi";
-        setMessages([
-          {
-            role: "assistant",
-            content: `${greetingLang} ${parsed.name}! I'm excited to help you learn **${parsed.subject}** at a **${parsed.level}** level. \n\nWhat specific topic would you like to start with?`
-          }
-        ]);
+    const initProfile = async () => {
+      const p = await loadData("edu_profile");
+      if (p) {
+        setProfile(p);
+        
+        const savedChats = await loadData("edu_chats");
+        if (savedChats && Array.isArray(savedChats) && savedChats.length > 0) {
+          setMessages(savedChats);
+        } else {
+          const greetingLang = p.language === "Spanish" ? "Hola" : p.language === "French" ? "Bonjour" : p.language === "Hindi" ? "नमस्ते" : "Hi";
+          setMessages([
+            {
+              role: "assistant",
+              content: `${greetingLang} ${p.name}! I'm excited to help you learn **${p.subject}** at a **${p.level}** level. \n\nWhat specific topic would you like to start with?`
+            }
+          ]);
+        }
       }
-    }
+    };
+    initProfile();
 
     if (typeof window !== "undefined" && ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -69,7 +72,7 @@ export default function Chat({ onBack }: Props) {
 
   useEffect(() => {
     if (messages.length > 0) {
-      localStorage.setItem("edu_chats", JSON.stringify(messages));
+      saveData("edu_chats", messages);
     }
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -140,8 +143,9 @@ export default function Chat({ onBack }: Props) {
       setMessages(prev => [...prev, { role: "assistant", content: data.reply }]);
       
       if (!customAction) {
-        const currentXP = parseInt(localStorage.getItem("edu_xp") || "0");
-        localStorage.setItem("edu_xp", (currentXP + 10).toString());
+        const xpStr = await loadData("edu_xp");
+        const currentXP = parseInt(xpStr || "0");
+        await saveData("edu_xp", (currentXP + 10).toString());
       }
     } catch (error) {
       console.error(error);

@@ -21,6 +21,7 @@ export default function Login({ onLogin }: Props) {
     setIsLoading(true);
     // Simulate network delay for realistic feel
     setTimeout(() => {
+      localStorage.setItem("edu_user_id", email);
       localStorage.setItem("edu_auth_token", "mock_token_" + Date.now());
       onLogin();
     }, 1200);
