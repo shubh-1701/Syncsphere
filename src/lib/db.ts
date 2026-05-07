@@ -51,3 +51,9 @@ export const loadData = async (key: string) => {
   }
   return null;
 };
+
+export const removeData = async (key: string) => {
+  if (typeof window !== "undefined") {
+    localStorage.removeItem(key);
+  }
+};
