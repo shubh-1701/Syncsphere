@@ -5,12 +5,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { GraduationCap, ArrowRight, BookOpen, Sparkles, Globe } from "lucide-react";
 import confetti from "canvas-confetti";
 import { saveData } from "@/lib/db";
+import { useRouter } from "next/navigation";
 
-interface Props {
-  onComplete: () => void;
-}
-
-export default function Onboarding({ onComplete }: Props) {
+export default function Onboarding() {
+  const router = useRouter();
   const [step, setStep] = useState(1);
   const [name, setName] = useState("");
   const [subject, setSubject] = useState("");
@@ -27,7 +25,7 @@ export default function Onboarding({ onComplete }: Props) {
     // We save standard instead of level now
     await saveData("edu_profile", { name, subject, level: standard, language, standard });
     setTimeout(() => {
-      onComplete();
+      router.push("/dashboard");
     }, 1500);
   };
 
@@ -77,12 +75,27 @@ export default function Onboarding({ onComplete }: Props) {
               <BookOpen className="w-10 h-10 text-blue-400 mx-auto mb-4" />
               <h2 className="text-3xl font-bold font-heading mb-2">What do you want to learn?</h2>
             </div>
-            <div className="grid grid-cols-2 gap-3 mb-8">
+            <div className="grid grid-cols-2 gap-3 mb-4">
               {['Mathematics', 'Physics', 'Chemistry', 'Biology', 'Computer Science', 'English', 'History', 'Geography'].map(sub => (
                 <button key={sub} onClick={() => setSubject(sub)} className={`w-full text-left px-4 py-3 rounded-xl border transition-all ${subject === sub ? 'bg-blue-600/20 border-blue-500 text-white' : 'bg-slate-800/50 border-slate-700 text-slate-300 hover:bg-slate-800'}`}>
                   {sub}
                 </button>
               ))}
+            </div>
+            <div className="mb-8">
+              <div className="relative flex items-center py-2">
+                <div className="flex-grow border-t border-slate-700"></div>
+                <span className="flex-shrink-0 mx-4 text-slate-500 text-sm">or enter your own</span>
+                <div className="flex-grow border-t border-slate-700"></div>
+              </div>
+              <input 
+                type="text" 
+                placeholder="e.g. Artificial Intelligence, Economics..." 
+                value={!['Mathematics', 'Physics', 'Chemistry', 'Biology', 'Computer Science', 'English', 'History', 'Geography'].includes(subject) ? subject : ""}
+                onChange={(e) => setSubject(e.target.value)}
+                className="w-full mt-2 bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none text-white transition-all"
+                onKeyDown={e => e.key === 'Enter' && subject && setStep(4)}
+              />
             </div>
             <button onClick={() => setStep(4)} disabled={!subject} className="w-full bg-blue-600 disabled:bg-slate-700 text-white py-3.5 rounded-xl font-medium flex items-center justify-center transition-all">
               Continue <ArrowRight className="ml-2 w-4 h-4" />

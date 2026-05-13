@@ -5,17 +5,16 @@ import { Send, Bot, User, Sparkles, Loader2, LogOut, Download, Briefcase, ArrowL
 import ReactMarkdown from "react-markdown";
 import Flashcard from "./Flashcard";
 import { saveData, loadData } from "@/lib/db";
+import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 
 interface Message {
   role: "system" | "user" | "assistant";
   content: string;
 }
 
-interface Props {
-  onBack: () => void;
-}
-
-export default function Chat({ onBack }: Props) {
+export default function Chat() {
+  const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -91,7 +90,7 @@ export default function Chat({ onBack }: Props) {
         recognitionRef.current.start();
         setIsListening(true);
       } else {
-        alert("Speech Recognition is not supported in this browser.");
+        toast.error("Speech Recognition is not supported in this browser.");
       }
     }
   };
@@ -217,7 +216,7 @@ export default function Chat({ onBack }: Props) {
     <div className="flex flex-col h-full bg-slate-900 border-x border-slate-800 shadow-2xl relative">
       <header className="px-6 py-4 border-b border-slate-800 bg-slate-900/80 backdrop-blur-md flex items-center justify-between sticky top-0 z-10">
         <div className="flex items-center space-x-3">
-          <button onClick={onBack} className="text-slate-400 hover:text-white mr-2 transition-colors">
+          <button onClick={() => router.push("/dashboard")} className="text-slate-400 hover:text-white mr-2 transition-colors">
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div className="bg-blue-500/20 p-2 rounded-lg hidden sm:block">

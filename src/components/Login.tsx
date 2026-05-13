@@ -3,28 +3,52 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { LogIn, Sparkles, UserPlus } from "lucide-react";
+import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
+import { auth } from "@/lib/firebase";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
 
-interface Props {
-  onLogin: () => void;
-}
-
-export default function Login({ onLogin }: Props) {
+export default function Login() {
+  const router = useRouter();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) return;
     
     setIsLoading(true);
-    // Simulate network delay for realistic feel
-    setTimeout(() => {
-      localStorage.setItem("edu_user_id", email);
+
+    try {
+      if (auth) {
+        if (isLogin) {
+          await signInWithEmailAndPassword(auth, email, password);
+        } else {
+          await createUserWithEmailAndPassword(auth, email, password);
+        }
+        localStorage.setItem("edu_user_id", auth.currentUser?.uid || email);
+      } else {
+        // Fallback Mock Login
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        localStorage.setItem("edu_user_id", email);
+      }
+
       localStorage.setItem("edu_auth_token", "mock_token_" + Date.now());
-      onLogin();
-    }, 1200);
+      toast.success("Successfully authenticated!");
+      
+      const hasProfile = !!localStorage.getItem("edu_profile");
+      if (hasProfile) {
+        router.push("/dashboard");
+      } else {
+        router.push("/onboarding");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to authenticate.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

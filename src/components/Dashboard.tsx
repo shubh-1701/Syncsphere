@@ -4,10 +4,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { BookOpen, Flame, Trophy, Play, Settings, Star, LogOut, Trash2, Edit3, Map, CheckCircle2, Loader2 } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import { loadData, removeData } from "@/lib/db";
-
-interface Props {
-  onStartChat: () => void;
-}
+import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 
 interface RoadmapStep {
   step: number;
@@ -15,7 +13,8 @@ interface RoadmapStep {
   description: string;
 }
 
-export default function Dashboard({ onStartChat }: Props) {
+export default function Dashboard() {
+  const router = useRouter();
   const [profile, setProfile] = useState<{name: string, subject: string, level?: string, standard?: string, language?: string} | null>(null);
   const [xp, setXp] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
@@ -91,7 +90,7 @@ export default function Dashboard({ onStartChat }: Props) {
     if (action === "clear_chat") {
       if (confirm("Are you sure you want to clear your chat history?")) {
         await removeData("edu_chats");
-        alert("Chat history cleared!");
+        toast.success("Chat history cleared!");
       }
     } else if (action === "edit_profile") {
       if (confirm("This will reset your learning profile but keep your XP. Continue?")) {
@@ -104,7 +103,7 @@ export default function Dashboard({ onStartChat }: Props) {
         localStorage.removeItem("edu_auth_token");
         await removeData("edu_chats");
         await removeData("edu_xp");
-        window.location.reload();
+        router.push("/login");
       }
     }
     setShowSettings(false);
@@ -235,7 +234,7 @@ export default function Dashboard({ onStartChat }: Props) {
             </div>
 
             <button 
-              onClick={onStartChat}
+              onClick={() => router.push("/chat")}
               className="mt-8 bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 rounded-2xl font-medium transition-all shadow-[0_0_20px_rgba(59,130,246,0.3)] hover:shadow-[0_0_30px_rgba(59,130,246,0.5)] flex items-center group w-full justify-center"
             >
               Resume Learning <Play className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform fill-current" />
